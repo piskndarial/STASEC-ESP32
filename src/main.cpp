@@ -50,7 +50,7 @@ void setup() {
 
   WiFiManager wm;
   bool res;
-  res = wm.autoConnect("SJ Legacy ESP32 FRREE WIFI!!!!!!!!!!!!!","");
+  res = wm.autoConnect("SJ Legacy ESP32 FREE WIFI!!!!!!!!!!!!!","");
   if(!res) {
         Serial.println("Failed to connect");
 
