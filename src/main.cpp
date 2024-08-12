@@ -3,6 +3,7 @@
   Complete project details at https://RandomNerdTutorials.com/telegram-esp32-motion-detection-arduino/
   
   Project created using Brian Lough's Universal Telegram Bot Library: https://github.com/witnessmenow/Universal-Arduino-Telegram-Bot
+  Recontribute by piskndar for STASEC Project.
 */
 
 #include <WiFi.h>
@@ -12,6 +13,24 @@
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
+#include <Keypad.h>
+
+const byte ROWS = 4;
+const byte COLS = 4;
+char keys[ROWS][COLS] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+byte rowPins[ROWS] = {14, 27, 26, 25};
+byte colPins[COLS] = {33, 32, 35, 32};
+
+Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+unsigned long loopCount;
+unsigned long startTime;
+String msg;
 
 // Replace with your network credentials
 //const char* ssid = "SJ Wifi #27@unifi";
@@ -40,6 +59,9 @@ void IRAM_ATTR detectsMovement() {
 }
 
 void setup() {
+  loopCount = 0;
+  startTime = millis();
+  msg = "";
   pinMode(2 , OUTPUT);
   pinMode(15, OUTPUT);
   pinMode(4, OUTPUT);
@@ -50,7 +72,7 @@ void setup() {
 
   WiFiManager wm;
   bool res;
-  res = wm.autoConnect("SJ Legacy ESP32 FREE WIFI!!!!!!!!!!!!!","");
+  res = wm.autoConnect("SJ Legacy ESP32 Free WiFi!","password");
   if(!res) {
         Serial.println("Failed to connect");
 
@@ -109,5 +131,31 @@ void loop() {
       delay(100);
     }
     digitalWrite(15, true);
+  }
+
+  if (kpd.getKeys())
+  {
+    for (int i=0; i<LIST_MAX; i++)
+    {
+      if (kpd.key[i].stateChanged)
+      {
+        switch (kpd.key[i].kstate) {
+          case PRESSED:
+          msg = "PRESSED.";
+        break;
+          case HOLD:
+          msg = "HOLD.";
+        break;
+          case RELEASED:
+          msg = "RELEASED.";
+        break;
+          case IDLE:
+          msg = "IDLE.";
+        }
+        Serial.print("KEY ");
+        Serial.print(kpd.key[i].kchar);
+        Serial.println(msg); 
+      }
+    }
   }
 }
