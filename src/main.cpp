@@ -59,6 +59,7 @@ void IRAM_ATTR detectsMovement() {
 }
 
 void setup() {
+  Serial.begin(115200);
   loopCount = 0;
   startTime = millis();
   msg = "";
@@ -68,7 +69,7 @@ void setup() {
   /* Merah = 2
      Hijau = 15
      Biru = 4*/
-  Serial.begin(115200);
+  
 
   WiFiManager wm;
   bool res;
