@@ -13,6 +13,7 @@
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
+/*
 #include <Keypad.h>
 
 const byte ROWS = 4;
@@ -31,7 +32,7 @@ Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 unsigned long loopCount;
 unsigned long startTime;
 String msg;
-
+*/
 // Replace with your network credentials
 //const char* ssid = "SJ Wifi #27@unifi";
 //const char* password = "SJfreewifi2023";
@@ -60,9 +61,11 @@ void IRAM_ATTR detectsMovement() {
 
 void setup() {
   Serial.begin(115200);
+  /*
   loopCount = 0;
   startTime = millis();
   msg = "";
+  */
   pinMode(2 , OUTPUT);
   pinMode(15, OUTPUT);
   pinMode(4, OUTPUT);
@@ -134,6 +137,7 @@ void loop() {
     digitalWrite(15, true);
   }
 
+  /*
   if (kpd.getKeys())
   {
     for (int i=0; i<LIST_MAX; i++)
@@ -158,5 +162,5 @@ void loop() {
         Serial.println(msg); 
       }
     }
-  }
+  }*/
 }
