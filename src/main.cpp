@@ -149,7 +149,7 @@ String sendPhotoTelegram() {
   if (client.connect(myDomain, 443)) {
     Serial.println("Connection successful");
     
-    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + String(CHAT_ID) + "\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
+    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + String(CHAT_ID) + "\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.png\"\r\nContent-Type: image/png\r\n\r\n";
     String tail = "\r\n--RandomNerdTutorials--\r\n";
 
     size_t imageLen = fb->len;
