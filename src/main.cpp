@@ -37,24 +37,29 @@ bool sendPhoto = false;
 int botRequestDelay = 1000;
 unsigned long lastTimeBotRan;
 
-#define XCLK_GPIO_NUM     27
-#define SIOD_GPIO_NUM     25
-#define SIOC_GPIO_NUM     23
+#define CAMERA_MODEL_ESP32 "OV7670"
+#define CAMERA_FRAME_SIZE FRAMESIZE_UXGA
+#define CAMERA_PIXFORMAT PIXFORMAT_JPEG
 
+#define PWDN_GPIO_NUM     -1
+#define RESET_GPIO_NUM    15
+#define XCLK_GPIO_NUM     27
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     23
 #define Y9_GPIO_NUM       19
-#define Y8_GPIO_NUM       36
+#define Y8_GPIO_NUM       2
 #define Y7_GPIO_NUM       18
-#define Y6_GPIO_NUM       39
+#define Y6_GPIO_NUM       4
 #define Y5_GPIO_NUM       5
-#define Y4_GPIO_NUM       34
-#define Y3_GPIO_NUM       17
-#define Y2_GPIO_NUM       35
+#define Y4_GPIO_NUM       17 //...
+#define Y3_GPIO_NUM       2 //1
+#define Y2_GPIO_NUM       35 //0
 #define VSYNC_GPIO_NUM    22
-#define HREF_GPIO_NUM     26
+#define HREF_GPIO_NUM     4
 #define PCLK_GPIO_NUM     21
 
 void configInitCamera(){
-  camera_config_t config;
+ camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
@@ -71,9 +76,13 @@ void configInitCamera(){
   config.pin_href = HREF_GPIO_NUM;
   config.pin_sscb_sda = SIOD_GPIO_NUM;
   config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG;
-  config.grab_mode = CAMERA_GRAB_LATEST;
+  config.pixel_format = CAMERA_PIXFORMAT;
+  config.frame_size = CAMERA_FRAME_SIZE;
+  config.jpeg_quality = 12;
+  config.fb_count = 1;
   
   if(psramFound()){
     config.frame_size = FRAMESIZE_UXGA;
@@ -149,7 +158,7 @@ String sendPhotoTelegram() {
   if (client.connect(myDomain, 443)) {
     Serial.println("Connection successful");
     
-    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + String(CHAT_ID)+ "\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.png\"\r\nContent-Type: image/png\r\n\r\n";
+    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + String(CHAT_ID)+ "\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
     String tail = "\r\n--RandomNerdTutorials--\r\n";
 
     size_t imageLen = fb->len;
