@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <WiFi.h>
 #include <Wire.h>
 #include "esp_camera.h"
 #include <esp_log.h>
@@ -27,36 +28,6 @@ static const char *TAG = "OV7670";
 #define D5_PIN 2
 #define D6_PIN 15
 #define D7_PIN 13
-
-void setup() {
-  Wire.begin();
-  Serial.begin(115200);
-
-  // Initialize OV7670 camera
-  initializeCamera();
-  
-  // Initialize GPIO for camera data pins
-  pinMode(VSYNC_PIN, INPUT);
-  pinMode(HREF_PIN, INPUT);
-  pinMode(PCLK_PIN, INPUT);
-  for (int i = D0_PIN; i <= D7_PIN; i++) {
-    pinMode(i, INPUT);
-  }
-
-  // Initialize XCLK for camera
-  ledcAttachPin(XCLK_PIN, 0);  // Use LEDC to generate clock signal
-  ledcSetup(0, 20000000, 1);   // 20MHz clock
-  ledcWrite(0, 1);
-
-  // Ready to capture image
-  Serial.println("Camera Initialized");
-}
-
-void loop() {
-  if (digitalRead(VSYNC_PIN) == HIGH) {
-    captureImage();
-  }
-}
 
 void initializeCamera() {
   Wire.beginTransmission(OV7670_I2C_ADDRESS);
@@ -91,3 +62,34 @@ void captureImage() {
 
   Serial.println("Image Captured");
 }
+
+void setup() {
+  Wire.begin();
+  Serial.begin(115200);
+
+  // Initialize OV7670 camera
+  initializeCamera();
+  
+  // Initialize GPIO for camera data pins
+  pinMode(VSYNC_PIN, INPUT);
+  pinMode(HREF_PIN, INPUT);
+  pinMode(PCLK_PIN, INPUT);
+  for (int i = D0_PIN; i <= D7_PIN; i++) {
+    pinMode(i, INPUT);
+  }
+
+  // Initialize XCLK for camera
+  ledcAttachPin(XCLK_PIN, 0);  // Use LEDC to generate clock signal
+  ledcSetup(0, 20000000, 1);   // 20MHz clock
+  ledcWrite(0, 1);
+
+  // Ready to capture image
+  Serial.println("Camera Initialized");
+}
+
+void loop() {
+  if (digitalRead(VSYNC_PIN) == HIGH) {
+    captureImage();
+  }
+}
+
