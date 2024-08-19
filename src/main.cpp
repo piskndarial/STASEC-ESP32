@@ -44,13 +44,13 @@ String msg;
 // Also note that you need to click "start" on a bot before it can
 // message you
 #define CHAT_ID "1823422500" //shahril
-//#define CHAT_ID1 "62086994" //sod
+//#define CHAT_ID1 "62086994" //cg saiful
 //#define CHAT_ID2 "5189525146" //adi
 
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 
-const int motionSensor = 13; // PIR Motion Sensor
+const int motionSensor = 27; // PIR Motion Sensor
 bool motionDetected = false;
 
 // Indicates when motion is detected
