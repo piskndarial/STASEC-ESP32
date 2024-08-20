@@ -228,19 +228,19 @@ String sendPhotoTelegram()
   if (clientTCP.connect(myDomain, 443)) {
     Serial.println("Connection successful");
     
-    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + CHAT_ID + "\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
+    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + String(CHAT_ID) +"\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
     String tail = "\r\n--RandomNerdTutorials--\r\n";
 
     size_t imageLen = fb->len;
     size_t extraLen = head.length() + tail.length();
     size_t totalLen = imageLen + extraLen;
   
-    clientTCP.println("POST /bot"+BOTtoken+"/sendPhoto HTTP/1.1");
-    clientTCP.println("Host: " + String(myDomain));
-    clientTCP.println("Content-Length: " + String(totalLen));
-    clientTCP.println("Content-Type: multipart/form-data; boundary=RandomNerdTutorials");
-    clientTCP.println();
-    clientTCP.print(head);
+    client.println("POST /bot"+ String(BOTtoken) +"/sendPhoto HTTP/1.1");
+    client.println("Host: " + String(myDomain));
+    client.println("Content-Length: " + String(totalLen));
+    client.println("Content-Type: multipart/form-data; boundary=RandomNerdTutorials");
+    client.println();
+    client.print(head);
   
     uint8_t *fbBuf = fb->buf;
     size_t fbLen = fb->len;
