@@ -6,8 +6,8 @@
 #include "camera_pins.h"
 
 // WiFi credentials
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
+const char* ssid = "SJ Wifi #27@unifi";
+const char* password = "SJfreewifi2023";
 
 // Camera configuration
 void startCameraServer();
