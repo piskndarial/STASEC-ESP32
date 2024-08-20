@@ -17,7 +17,6 @@
 #define D7_PIN 13
 
 void setup() {
-  Wire.begin();
   Serial.begin(115200);
 
   // Initialize OV7670 camera
