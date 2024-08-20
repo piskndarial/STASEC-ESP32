@@ -34,16 +34,16 @@ static const char *TAG = "OV7670";
 #define D5_PIN 14
 #define D6_PIN 12
 #define D7_PIN 13
-const char* ssid = "REPLACE_WITH_YOUR_SSID";
-const char* password = "REPLACE_WITH_YOUR_PASSWORD";
+const char* ssid = "SJ Wifi #51";
+const char* password = "SJfreewifi2023";
 
 // Initialize Telegram BOT
-String BOTtoken = "XXXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";  // your Bot Token (Get from Botfather)
+String BOTtoken = "7323854577:AAGJfewY7Eb0pknO1BTAQ2vdo-YETaCj5nM";  // your Bot Token (Get from Botfather)
 
 // Use @myidbot to find out the chat ID of an individual or a group
 // Also note that you need to click "start" on a bot before it can
 // message you
-String CHAT_ID = "XXXXXXXXXX";
+String CHAT_ID = "6599851050";
 
 bool sendPhoto = false;
 
