@@ -4,6 +4,8 @@
 
 #define CAMERA_MODEL_WROVER_KIT
 #include "camera_pins.h"
+#define LEDC_CHANNEL 0  
+#define LEDC_TIMER  0
 
 // WiFi credentials
 const char* ssid = "SJ Wifi #27@unifi";
@@ -25,8 +27,8 @@ void setup() {
 
   // Initialize the camera
   camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL;
-  config.ledc_timer = LEDC_TIMER;
+  config.ledc_channel = (ledc_channel_t)LEDC_CHANNEL;
+  config.ledc_timer = (ledc_timer_t)LEDC_TIMER;
   config.pin_d0 = 32;
   config.pin_d1 = 33;
   config.pin_d2 = 25;
