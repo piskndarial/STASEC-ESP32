@@ -25,8 +25,8 @@ static const char *TAG = "OV7670";
 #define HREF_PIN 4
 #define PCLK_PIN 23 // Changed to avoid conflict
 #define XCLK_PIN 19
-#define SIOD_GPIO_NUM    21
-#define SIOC_GPIO_NUM    22
+#define SIOD_GPIO_NUM    21  // sda 
+#define SIOC_GPIO_NUM    22  // scl
 #define D0_PIN 32
 #define D1_PIN 33
 #define D2_PIN 25
