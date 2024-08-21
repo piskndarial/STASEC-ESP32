@@ -23,7 +23,7 @@ static const char *TAG = "OV7670";
 // Define OV7670 pin connections
 #define VSYNC_PIN 5
 #define HREF_PIN 4
-#define PCLK_PIN 23 
+#define PCLK_PIN 23 // Changed to avoid conflict
 #define XCLK_PIN 19
 #define SIOD_GPIO_NUM    21
 #define SIOC_GPIO_NUM    22
@@ -35,6 +35,7 @@ static const char *TAG = "OV7670";
 #define D5_PIN 14
 #define D6_PIN 12
 #define D7_PIN 13
+#define FLASH_LED_PIN 4
 
 const char* ssid = "SJ Wifi #51";
 const char* password = "SJfreewifi2023";
@@ -52,6 +53,9 @@ bool flashState = LOW;
 
 int botRequestDelay = 1000;
 unsigned long lastTimeBotRan;
+
+// JPEG Encoder instance
+
 
 void configInitCamera(){
   camera_config_t config;
