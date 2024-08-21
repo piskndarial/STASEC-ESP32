@@ -34,19 +34,17 @@ static const char *TAG = "OV7670";
 #define D5_PIN 14
 #define D6_PIN 12
 #define D7_PIN 13
-const char* ssid = "REPLACE_WITH_YOUR_SSID";
-const char* password = "REPLACE_WITH_YOUR_PASSWORD";
-
+const char* ssid = "SJ Wifi #51";
+const char* password = "SJfreewifi2023";
+#define HANDLE_NEW_MESSAGES_H
 // Initialize Telegram BOT
-String BOTtoken = "XXXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";  // your Bot Token (Get from Botfather)
+String BOTtoken = "7323854577:AAGJfewY7Eb0pknO1BTAQ2vdo-YETaCj5nM";  // your Bot Token (Get from Botfather)
 
 // Use @myidbot to find out the chat ID of an individual or a group
 // Also note that you need to click "start" on a bot before it can
 // message you
-String CHAT_ID = "XXXXXXXXXX";
-
+String CHAT_ID = "1823422500";
 bool sendPhoto = false;
-
 WiFiClientSecure clientTCP;
 UniversalTelegramBot bot(BOTtoken, clientTCP);
 
@@ -56,11 +54,7 @@ bool flashState = LOW;
 //Checks for new messages every 1 second.
 int botRequestDelay = 1000;
 unsigned long lastTimeBotRan;
-
-void initializeCamera();
-void captureImage();
-
-void setup() {
+void configInitCamera(){
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -76,75 +70,15 @@ void setup() {
   config.pin_pclk = PCLK_PIN;
   config.pin_vsync = VSYNC_PIN;
   config.pin_href = HREF_PIN;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = -1;    // Power down pin (-1 if not used)
   config.pin_reset = -1;   // Reset pin (-1 if not used)
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG; // or PIXFORMAT_RGB565 for raw data
   
-  Wire.begin();
-  Serial.begin(115200);
-
-  // Initialize OV7670 camera
-  initializeCamera();
   
-  // Initialize GPIO for camera data pins
-  pinMode(VSYNC_PIN, INPUT);
-  pinMode(HREF_PIN, INPUT);
-  pinMode(PCLK_PIN, INPUT);
-  for (int i = D0_PIN; i <= D7_PIN; i++) {
-    pinMode(i, INPUT);
-  }
-
-  // Initialize XCLK for camera
-  ledcAttachPin(XCLK_PIN, 0);  // Use LEDC to generate clock signal
-  ledcSetup(0, 20000000, 1);   // 20MHz clock
-  ledcWrite(0, 1);
-
-  // Ready to capture image
-  Serial.println("Camera Initialized");
-}
-
-void initializeCamera() {
-  Serial.println("Initializing camera...");
-  Wire.beginTransmission(OV7670_I2C_ADDRESS);
-  Serial.println("  Sending reset command...");
-  Wire.write(0x12); // Reset the camera
-  Wire.write(0x80);
-  Wire.endTransmission();
-  
-  Serial.println("  Waiting for reset...");
-  delay(100); // Wait for reset
-  
-  Serial.println("  Initialization complete.");
-  
-  // More initialization commands can be added here
-}
-
-void captureImage() 
-{
-  Serial.println("Capturing Image...");
-
-  while (digitalRead(VSYNC_PIN) == LOW); // Wait for VSYNC to go high
-
-  while (digitalRead(VSYNC_PIN) == HIGH) { // Image capture loop
-    if (digitalRead(HREF_PIN) == HIGH) {
-      // Read pixel data
-      uint8_t byte = 0;
-      for (int i = 0; i < 8; i++) {
-        byte |= digitalRead(D0_PIN + i) << i;
-      }
-      Serial.write(byte); // Send pixel byte to Serial for now (or save to buffer)
-    }
-
-    while (digitalRead(PCLK_PIN) == LOW); // Wait for PCLK high
-    while (digitalRead(PCLK_PIN) == HIGH); // Wait for PCLK low
-  }
-
-  Serial.println("Image Captured");
-  
-//init with high specs to pre-allocate larger buffers
+  //init with high specs to pre-allocate larger buffers
   if(psramFound()){
     config.frame_size = FRAMESIZE_UXGA;
     config.jpeg_quality = 10;  //0-63 lower number means higher quality
@@ -164,45 +98,7 @@ void captureImage()
   }
 }
 
-void handleNewMessages(int numNewMessages) 
-{
-  Serial.print("Handle New Messages: ");
-  Serial.println(numNewMessages);
-
-  for (int i = 0; i < numNewMessages; i++) {
-    String chat_id = String(bot.messages[i].chat_id);
-    if (chat_id != CHAT_ID){
-      bot.sendMessage(chat_id, "Unauthorized user", "");
-      continue;
-    }
-    
-    // Print the received message
-    String text = bot.messages[i].text;
-    Serial.println(text);
-    
-    String from_name = bot.messages[i].from_name;
-    if (text == "/start") {
-      String welcome = "Welcome , " + from_name + "\n";
-      welcome += "Use the following commands to interact with the ESP32-CAM \n";
-      welcome += "/photo : takes a new photo\n";
-      welcome += "/flash : toggles flash LED \n";
-      bot.sendMessage(CHAT_ID, welcome, "");
-    }
-    if (text == "/flash") {
-      flashState = !flashState;
-      digitalWrite(FLASH_LED_PIN, flashState);
-      Serial.println("Change flash LED state");
-    }
-    if (text == "/photo") {
-      sendPhoto = true;
-      Serial.println("New photo request");
-    }
-  }
-}
-
-String sendPhotoTelegram() 
-{
-
+String sendPhotoTelegram() {
   const char* myDomain = "api.telegram.org";
   String getAll = "";
   String getBody = "";
@@ -228,19 +124,19 @@ String sendPhotoTelegram()
   if (clientTCP.connect(myDomain, 443)) {
     Serial.println("Connection successful");
     
-    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + String(CHAT_ID) +"\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
+    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + CHAT_ID + "\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
     String tail = "\r\n--RandomNerdTutorials--\r\n";
 
     size_t imageLen = fb->len;
     size_t extraLen = head.length() + tail.length();
     size_t totalLen = imageLen + extraLen;
   
-    client.println("POST /bot"+ String(BOTtoken) +"/sendPhoto HTTP/1.1");
-    client.println("Host: " + String(myDomain));
-    client.println("Content-Length: " + String(totalLen));
-    client.println("Content-Type: multipart/form-data; boundary=RandomNerdTutorials");
-    client.println();
-    client.print(head);
+    clientTCP.println("POST /bot"+BOTtoken+"/sendPhoto HTTP/1.1");
+    clientTCP.println("Host: " + String(myDomain));
+    clientTCP.println("Content-Length: " + String(totalLen));
+    clientTCP.println("Content-Type: multipart/form-data; boundary=RandomNerdTutorials");
+    clientTCP.println();
+    clientTCP.print(head);
   
     uint8_t *fbBuf = fb->buf;
     size_t fbLen = fb->len;
@@ -289,9 +185,24 @@ String sendPhotoTelegram()
   return getBody;
 }
 
-void setup()
+
+
+void handleSendPhoto() 
 {
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
+  Serial.println("Preparing photo");
+  sendPhotoTelegram();
+}
+
+void handleNewMessages(int numNewMessages)
+{
+  for (int i = 0; i < numNewMessages; i++)
+  {
+    bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].text, "");
+  }
+}
+
+void setup() {
+   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
   // Init Serial Monitor
   Serial.begin(115200);
 
@@ -316,22 +227,55 @@ void setup()
   Serial.println();
   Serial.print("ESP32-CAM IP Address: ");
   Serial.println(WiFi.localIP()); 
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = D0_PIN;
+  config.pin_d1 = D1_PIN;
+  config.pin_d2 = D2_PIN;
+  config.pin_d3 = D3_PIN;
+  config.pin_d4 = D4_PIN;
+  config.pin_d5 = D5_PIN;
+  config.pin_d6 = D6_PIN;
+  config.pin_d7 = D7_PIN;
+  config.pin_xclk = XCLK_PIN;
+  config.pin_pclk = PCLK_PIN;
+  config.pin_vsync = VSYNC_PIN;
+  config.pin_href = HREF_PIN;
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = -1;    // Power down pin (-1 if not used)
+  config.pin_reset = -1;   // Reset pin (-1 if not used)
+  config.xclk_freq_hz = 20000000;
+  config.pixel_format = PIXFORMAT_JPEG; // or PIXFORMAT_RGB565 for raw data
+  
+  
+ 
+  // Initialize GPIO for camera data pins
+  pinMode(VSYNC_PIN, INPUT);
+  pinMode(HREF_PIN, INPUT);
+  pinMode(PCLK_PIN, INPUT);
+  for (int i = D0_PIN; i <= D7_PIN; i++) {
+    pinMode(i, INPUT);
+  }
+
+  // Initialize XCLK for camera
+  ledcAttachPin(XCLK_PIN, 0);  // Use LEDC to generate clock signal
+  ledcSetup(0, 20000000, 1);   // 20MHz clock
+  ledcWrite(0, 1);
+
+  // Ready to capture image
+  Serial.println("Camera Initialized");
 }
 
-void loop() 
-{
-
- if (digitalRead(VSYNC_PIN) == HIGH) {
-    captureImage();
-    delay(1000);
-  }
- 
+void loop() {
+  
   if (sendPhoto) {
-    Serial.println("Preparing photo");
-    sendPhotoTelegram(); 
-    sendPhoto = false; 
+    handleSendPhoto();
+    sendPhoto = false;
   }
-  if (millis() > lastTimeBotRan + botRequestDelay)  {
+
+  if (millis() > lastTimeBotRan + botRequestDelay) {
     int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
     while (numNewMessages) {
       Serial.println("got response");
