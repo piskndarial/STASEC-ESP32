@@ -1,9 +1,17 @@
+#include <esp_log.h>
+#include <esp_system.h>
+#include <nvs_flash.h>
+#include <sys/param.h>
+#include <string.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_camera.h"
 #include <WiFi.h>
 
 // Replace with your network credentials
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
+const char* ssid = "amir's lappy";
+const char* password = "12345678";
 
 void setup() {
     Serial.begin(115200);
@@ -25,8 +33,8 @@ void setup() {
     config.pin_pclk = 25;
     config.pin_vsync = 26;
     config.pin_href = 27;
-    config.pin_sccb_sda = 21;
-    config.pin_sccb_scl = 22;
+    config.pin_sccb_sda = 22;
+    config.pin_sccb_scl = 21;
     config.pin_reset = -1;
     config.xclk_freq_hz = 20000000;
     config.pixel_format = PIXFORMAT_JPEG;
@@ -46,6 +54,7 @@ void loop() {
     camera_fb_t *fb = esp_camera_fb_get();
     if (!fb) {
         Serial.println("Camera capture failed");
+        delay(1000);
         return;
     }
 
