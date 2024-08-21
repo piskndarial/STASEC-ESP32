@@ -15,6 +15,7 @@
 #include "soc/rtc_cntl_reg.h"
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
+
 static const char *TAG = "OV7670";
 
 #define OV7670_I2C_ADDRESS 0x21 // OV7670 default I2C address
@@ -22,7 +23,7 @@ static const char *TAG = "OV7670";
 // Define OV7670 pin connections
 #define VSYNC_PIN 5
 #define HREF_PIN 4
-#define PCLK_PIN 22
+#define PCLK_PIN 23 
 #define XCLK_PIN 19
 #define SIOD_GPIO_NUM    21
 #define SIOC_GPIO_NUM    22
@@ -34,16 +35,14 @@ static const char *TAG = "OV7670";
 #define D5_PIN 14
 #define D6_PIN 12
 #define D7_PIN 13
+
 const char* ssid = "SJ Wifi #51";
 const char* password = "SJfreewifi2023";
-#define HANDLE_NEW_MESSAGES_H
+
 // Initialize Telegram BOT
 String BOTtoken = "7323854577:AAGJfewY7Eb0pknO1BTAQ2vdo-YETaCj5nM";  // your Bot Token (Get from Botfather)
-
-// Use @myidbot to find out the chat ID of an individual or a group
-// Also note that you need to click "start" on a bot before it can
-// message you
 String CHAT_ID = "1823422500";
+
 bool sendPhoto = false;
 WiFiClientSecure clientTCP;
 UniversalTelegramBot bot(BOTtoken, clientTCP);
@@ -51,9 +50,9 @@ UniversalTelegramBot bot(BOTtoken, clientTCP);
 #define FLASH_LED_PIN 4
 bool flashState = LOW;
 
-//Checks for new messages every 1 second.
 int botRequestDelay = 1000;
 unsigned long lastTimeBotRan;
+
 void configInitCamera(){
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -77,8 +76,7 @@ void configInitCamera(){
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG; // or PIXFORMAT_RGB565 for raw data
   
-  
-  //init with high specs to pre-allocate larger buffers
+  // init with high specs to pre-allocate larger buffers
   if(psramFound()){
     config.frame_size = FRAMESIZE_UXGA;
     config.jpeg_quality = 10;  //0-63 lower number means higher quality
@@ -103,13 +101,9 @@ String sendPhotoTelegram() {
   String getAll = "";
   String getBody = "";
 
-  //Dispose first picture because of bad quality
   camera_fb_t * fb = NULL;
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb); // dispose the buffered image
   
   // Take a new photo
-  fb = NULL;  
   fb = esp_camera_fb_get();  
   if(!fb) {
     Serial.println("Camera capture failed");
@@ -119,7 +113,6 @@ String sendPhotoTelegram() {
   }  
   
   Serial.println("Connect to " + String(myDomain));
-
 
   if (clientTCP.connect(myDomain, 443)) {
     Serial.println("Connection successful");
@@ -185,24 +178,19 @@ String sendPhotoTelegram() {
   return getBody;
 }
 
-
-
-void handleSendPhoto() 
-{
+void handleSendPhoto() {
   Serial.println("Preparing photo");
   sendPhotoTelegram();
 }
 
-void handleNewMessages(int numNewMessages)
-{
-  for (int i = 0; i < numNewMessages; i++)
-  {
+void handleNewMessages(int numNewMessages) {
+  for (int i = 0; i < numNewMessages; i++) {
     bot.sendMessage(bot.messages[i].chat_id, bot.messages[i].text, "");
   }
 }
 
 void setup() {
-   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
   // Init Serial Monitor
   Serial.begin(115200);
 
@@ -212,77 +200,34 @@ void setup() {
 
   // Config and init the camera
   configInitCamera();
-
+  
   // Connect to Wi-Fi
-  WiFi.mode(WIFI_STA);
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  clientTCP.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(500);
+  WiFiManager wm;
+  bool res;
+  res = wm.autoConnect(ssid,password); 
+  if(!res) {
+    Serial.println("Failed to connect");
+    ESP.restart();
+  } 
+  else {
+    Serial.println("Connected to WiFi");
   }
-  Serial.println();
-  Serial.print("ESP32-CAM IP Address: ");
-  Serial.println(WiFi.localIP()); 
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = D0_PIN;
-  config.pin_d1 = D1_PIN;
-  config.pin_d2 = D2_PIN;
-  config.pin_d3 = D3_PIN;
-  config.pin_d4 = D4_PIN;
-  config.pin_d5 = D5_PIN;
-  config.pin_d6 = D6_PIN;
-  config.pin_d7 = D7_PIN;
-  config.pin_xclk = XCLK_PIN;
-  config.pin_pclk = PCLK_PIN;
-  config.pin_vsync = VSYNC_PIN;
-  config.pin_href = HREF_PIN;
-  config.pin_sccb_sda = SIOD_GPIO_NUM;
-  config.pin_sccb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = -1;    // Power down pin (-1 if not used)
-  config.pin_reset = -1;   // Reset pin (-1 if not used)
-  config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG; // or PIXFORMAT_RGB565 for raw data
   
-  
- 
-  // Initialize GPIO for camera data pins
-  pinMode(VSYNC_PIN, INPUT);
-  pinMode(HREF_PIN, INPUT);
-  pinMode(PCLK_PIN, INPUT);
-  for (int i = D0_PIN; i <= D7_PIN; i++) {
-    pinMode(i, INPUT);
-  }
-
-  // Initialize XCLK for camera
-  ledcAttachPin(XCLK_PIN, 0);  // Use LEDC to generate clock signal
-  ledcSetup(0, 20000000, 1);   // 20MHz clock
-  ledcWrite(0, 1);
-
-  // Ready to capture image
-  Serial.println("Camera Initialized");
+  clientTCP.setCACert(TELEGRAM_CERTIFICATE_ROOT);
 }
 
 void loop() {
-  
   if (sendPhoto) {
-    handleSendPhoto();
     sendPhoto = false;
+    handleSendPhoto();
   }
-
-  if (millis() > lastTimeBotRan + botRequestDelay) {
+  
+  if (millis() > lastTimeBotRan + botRequestDelay)  {
     int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-    while (numNewMessages) {
-      Serial.println("got response");
+    while(numNewMessages) {
       handleNewMessages(numNewMessages);
       numNewMessages = bot.getUpdates(bot.last_message_received + 1);
     }
     lastTimeBotRan = millis();
   }
 }
-
