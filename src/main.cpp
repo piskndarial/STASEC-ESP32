@@ -1,77 +1,42 @@
-#include <esp_log.h>
-#include <esp_system.h>
-#include <nvs_flash.h>
-#include <sys/param.h>
-#include <string.h>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_camera.h"
-#include <WiFi.h>
-
-// Replace with your network credentials
-const char* ssid = "amir's lappy";
-const char* password = "12345678";
+#include <Wire.h>
+#include <Arduino.h>
 
 void setup() {
-    Serial.begin(115200);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-    }
-    Serial.println("Connected to WiFi");
-
-    camera_config_t config;
-    config.ledc_channel = LEDC_CHANNEL_0;
-    config.ledc_timer = LEDC_TIMER_0;
-    config.pin_d0 = 32;
-    config.pin_d1 = 33;
-    config.pin_d2 = 34;
-    config.pin_d3 = 35;
-    config.pin_xclk = 23;
-    config.pin_pclk = 25;
-    config.pin_vsync = 26;
-    config.pin_href = 27;
-    config.pin_sccb_sda = 22;
-    config.pin_sccb_scl = 21;
-    config.pin_reset = -1;
-    config.xclk_freq_hz = 20000000;
-    config.pixel_format = PIXFORMAT_JPEG;
-    config.frame_size = FRAMESIZE_SVGA;
-    config.jpeg_quality = 12; // 0-63 lower number means higher quality
-    config.fb_count = 2; // if more than one, will use more RAM
-
-    // Initialize the camera
-    esp_err_t err = esp_camera_init(&config);
-    if (err != ESP_OK) {
-        Serial.printf("Camera init failed with error 0x%x", err);
-        return;
-    }
+  Wire.begin();
+  Serial.begin(115200);
+  Serial.println("\nI2C Scanner");
 }
 
 void loop() {
-    camera_fb_t *fb = esp_camera_fb_get();
-    if (!fb) {
-        Serial.println("Camera capture failed");
-        delay(1000);
-        return;
-    }
+  byte error;
+  byte address;
+  int nDevices;
 
-    // Send image to server
-    WiFiClient client;
-    if (client.connect("your.server.com", 80)) {
-        String header = "--boundary\r\n";
-        header += "Content-Disposition: form-data; name=\"file\"; filename=\"image.jpg\"\r\n";
-        header += "Content-Type: image/jpeg\r\n\r\n";
-        client.print(header);
-        client.write(fb->buf, fb->len);
-        client.print("\r\n--boundary--\r\n");
-        Serial.println("Image sent");
-    } else {
-        Serial.println("Failed to connect to server");
-    }
+  Serial.println("Scanning...");
 
-    esp_camera_fb_return(fb);
-    delay(5000); // Capture every 5 seconds
+  nDevices = 0;
+  for (address = 1; address < 127; address++) {
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+
+    if (error == 0) {
+      Serial.print("I2C device found at address 0x");
+      if (address < 16)
+        Serial.print("0");
+      Serial.print(address, HEX);
+      Serial.println(" !");
+      nDevices++;
+    } else if (error == 4) {
+      Serial.print("Unknown error at address 0x");
+      if (address < 16)
+        Serial.print("0");
+      Serial.println(address, HEX);
+    }
+  }
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("done\n");
+
+  delay(5000);
 }
