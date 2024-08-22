@@ -2,7 +2,24 @@
 
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7735.h> // Hardware-specific library
-
+#include <esp_camera.h>
+#include <Arduino.h>
+#include <Wire.h>
+#include "esp_camera.h"
+#include <esp_log.h>
+#include <esp_system.h>
+#include <nvs_flash.h>
+#include <sys/param.h>
+#include <string.h>
+#include "freertos/semphr.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <WiFiManager.h>
+#include <WiFiClientSecure.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+#include <UniversalTelegramBot.h>
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <WiFiClient.h>
@@ -31,8 +48,8 @@ const int TFT_CS = 5;
 //DIN <- MOSI 23
 //CLK <- SCK 18
 
-#define ssid1        "YOUR_WIFI_SSID"
-#define password1    "YOUR_PASSWORD"
+#define ssid1        "SJ Wifi #51"
+#define password1    "SJfreewifi2023"
 //#define ssid2        ""
 //#define password2    ""
 
