@@ -1,166 +1,156 @@
-/*
-  Rui Santos
-  Complete project details at https://RandomNerdTutorials.com/telegram-esp32-motion-detection-arduino/
-  
-  Project created using Brian Lough's Universal Telegram Bot Library: https://github.com/witnessmenow/Universal-Arduino-Telegram-Bot
-  Recontribute by piskndar for STASEC Project.
-*/
+#include "OV7670.h"
+
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
 
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <DNSServer.h>
-#include <WebServer.h>
-#include <UniversalTelegramBot.h>
-#include <ArduinoJson.h>
-#include <WiFiManager.h>
-/*
-#include <Keypad.h>
+#include <WiFiMulti.h>
+#include <WiFiClient.h>
+#include "BMP.h"
 
-const byte ROWS = 4;
-const byte COLS = 4;
-char keys[ROWS][COLS] = {
-  {'1', '2', '3', 'A'},
-  {'4', '5', '6', 'B'},
-  {'7', '8', '9', 'C'},
-  {'*', '0', '#', 'D'}
-};
-byte rowPins[ROWS] = {14, 27, 26, 25};
-byte colPins[COLS] = {33, 32, 35, 32};
+const int SIOD = 21; //SDA
+const int SIOC = 22; //SCL
 
-Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+const int VSYNC = 34;
+const int HREF = 35;
 
-unsigned long loopCount;
-unsigned long startTime;
-String msg;
-*/
-// Replace with your network credentials
-//const char* ssid = "SJ Wifi #27@unifi";
-//const char* password = "SJfreewifi2023";
+const int XCLK = 32;
+const int PCLK = 33;
 
-// Initialize Telegram BOT
-#define BOTtoken "7323854577:AAGJfewY7Eb0pknO1BTAQ2vdo-YETaCj5nM"  // your Bot Token (Get from Botfather)
+const int D0 = 27;
+const int D1 = 17;
+const int D2 = 16;
+const int D3 = 15;
+const int D4 = 14;
+const int D5 = 13;
+const int D6 = 12;
+const int D7 = 4;
 
-// Use @myidbot to find out the chat ID of an individual or a group
-// Also note that you need to click "start" on a bot before it can
-// message you
-#define CHAT_ID "1823422500" //shahril
-//#define CHAT_ID1 "62086994" //sod
-//#define CHAT_ID2 "5189525146" //adi
+const int TFT_DC = 2;
+const int TFT_CS = 5;
+//DIN <- MOSI 23
+//CLK <- SCK 18
 
-WiFiClientSecure client;
-UniversalTelegramBot bot(BOTtoken, client);
+#define ssid1        "YOUR_WIFI_SSID"
+#define password1    "YOUR_PASSWORD"
+//#define ssid2        ""
+//#define password2    ""
 
-const int motionSensor = 13; // PIR Motion Sensor
-bool motionDetected = false;
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, 0/*no reset*/);
+OV7670 *camera;
 
-// Indicates when motion is detected
-void IRAM_ATTR detectsMovement() {
-  //Serial.println("MOTION DETECTED!!!");
-  motionDetected = true;
-}
+WiFiMulti wifiMulti;
+WiFiServer server(80);
 
-void setup() {
-  Serial.begin(115200);
-  /*
-  loopCount = 0;
-  startTime = millis();
-  msg = "";
-  */
-  pinMode(2 , OUTPUT);
-  pinMode(15, OUTPUT);
-  pinMode(4, OUTPUT);
-  /* Merah = 2
-     Hijau = 15
-     Biru = 4*/
-  
+unsigned char bmpHeader[BMP::headerSize];
 
-  WiFiManager wm;
-  bool res;
-  res = wm.autoConnect("SJ Legacy ESP32 Free WiFi!","password");
-  if(!res) {
-        Serial.println("Failed to connect");
-
-  }
-  else {
-    Serial.println("Already connected!");
-    digitalWrite(2 ,false);
-    digitalWrite(15, false);
-    digitalWrite(4, true);
-    delay(1000);
-    digitalWrite(4, false);
-    digitalWrite(15, true);
-  }
-
-  // PIR Motion Sensor mode INPUT_PULLUP
-  pinMode(motionSensor, INPUT_PULLUP);
-  // Set motionSensor pin as interrupt, assign interrupt function and set RISING mode
-  attachInterrupt(digitalPinToInterrupt(motionSensor), detectsMovement, RISING);
-
-  // Attempt to connect to Wifi network:
-  //Serial.print("Connecting Wifi: ");
-  //Serial.println(ssid);
-
-  //WiFi.mode(WIFI_STA);
-  //WiFi.begin(ssid, password);
-  client.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
-  
-  //while (WiFi.status() != WL_CONNECTED) {
-    //Serial.print(".");
-    //delay(500);
-  //}
-
-  //Serial.println("");
-  //Serial.println("WiFi connected");
-  //Serial.print("IP address: ");
-  //Serial.println(WiFi.localIP());
-
-  bot.sendMessage(CHAT_ID, "Bot started up", "");
-  //bot.sendMessage(CHAT_ID1, "Bot started up", "");
-  //bot.sendMessage(CHAT_ID2, "Bot started up", "");
-  digitalWrite(15, true);
-}
-
-void loop() {
-  if(motionDetected){
-    bot.sendMessage(CHAT_ID, "Motion detected!!", "");
-    //bot.sendMessage(CHAT_ID1, "Motion detected!!", "");
-    //bot.sendMessage(CHAT_ID2, "Motion detected!!", "");
-    Serial.println("Motion Detected");
-    motionDetected = false;
-    digitalWrite(15, false);
-    for (int i = 0; i < 5; i++) {
-      digitalWrite(2, true);
-      delay(100);
-      digitalWrite(2, false);
-      delay(100);
-    }
-    digitalWrite(15, true);
-  }
-
-  /*
-  if (kpd.getKeys())
+void serve()
+{
+  WiFiClient client = server.available();
+  if (client) 
   {
-    for (int i=0; i<LIST_MAX; i++)
+    //Serial.println("New Client.");
+    String currentLine = "";
+    while (client.connected()) 
     {
-      if (kpd.key[i].stateChanged)
+      if (client.available()) 
       {
-        switch (kpd.key[i].kstate) {
-          case PRESSED:
-          msg = "PRESSED.";
-        break;
-          case HOLD:
-          msg = "HOLD.";
-        break;
-          case RELEASED:
-          msg = "RELEASED.";
-        break;
-          case IDLE:
-          msg = "IDLE.";
+        char c = client.read();
+        //Serial.write(c);
+        if (c == '\n') 
+        {
+          if (currentLine.length() == 0) 
+          {
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println();
+            client.print(
+              "<style>body{margin: 0}\nimg{height: 100%; width: auto}</style>"
+              "<img id='a' src='/camera' onload='this.style.display=\"initial\"; var b = document.getElementById(\"b\"); b.style.display=\"none\"; b.src=\"camera?\"+Date.now(); '>"
+              "<img id='b' style='display: none' src='/camera' onload='this.style.display=\"initial\"; var a = document.getElementById(\"a\"); a.style.display=\"none\"; a.src=\"camera?\"+Date.now(); '>");
+            client.println();
+            break;
+          } 
+          else 
+          {
+            currentLine = "";
+          }
+        } 
+        else if (c != '\r') 
+        {
+          currentLine += c;
         }
-        Serial.print("KEY ");
-        Serial.print(kpd.key[i].kchar);
-        Serial.println(msg); 
+        
+        if(currentLine.endsWith("GET /camera"))
+        {
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:image/bmp");
+            client.println();
+            
+            client.write(bmpHeader, BMP::headerSize);
+            client.write(camera->frame, camera->xres * camera->yres * 2);
+        }
       }
     }
-  }*/
+    // close the connection:
+    client.stop();
+    //Serial.println("Client Disconnected.");
+  }  
+}
+
+void setup() 
+{
+  Serial.begin(115200);
+
+  wifiMulti.addAP(ssid1, password1);
+  //wifiMulti.addAP(ssid2, password2);
+  Serial.println("Connecting Wifi...");
+  if(wifiMulti.run() == WL_CONNECTED) {
+      Serial.println("");
+      Serial.println("WiFi connected");
+      Serial.println("IP address: ");
+      Serial.println(WiFi.localIP());
+  }
+  
+  camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
+  BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
+  
+  tft.initR(INITR_BLACKTAB);
+  tft.fillScreen(0);
+  server.begin();
+}
+
+void displayY8(unsigned char * frame, int xres, int yres)
+{
+  tft.setAddrWindow(0, 0, yres - 1, xres - 1);
+  int i = 0;
+  for(int x = 0; x < xres; x++)
+    for(int y = 0; y < yres; y++)
+    {
+      i = y * xres + x;
+      unsigned char c = frame[i];
+      unsigned short r = c >> 3;
+      unsigned short g = c >> 2;
+      unsigned short b = c >> 3;
+      tft.pushColor(r << 11 | g << 5 | b);
+    }  
+}
+
+void displayRGB565(unsigned char * frame, int xres, int yres)
+{
+  tft.setAddrWindow(0, 0, yres - 1, xres - 1);
+  int i = 0;
+  for(int x = 0; x < xres; x++)
+    for(int y = 0; y < yres; y++)
+    {
+      i = (y * xres + x) << 1;
+      tft.pushColor((frame[i] | (frame[i+1] << 8)));
+    }  
+}
+
+void loop()
+{
+  camera->oneFrame();
+  serve();
+  displayRGB565(camera->frame, camera->xres, camera->yres);
 }
