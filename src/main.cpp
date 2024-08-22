@@ -48,10 +48,10 @@ const int D7 = 4;
 //DIN <- MOSI 23
 //CLK <- SCK 18
 
-#define ssid1        "SJ Wifi #51"
-#define password1    "SJfreewifi2023"
-//#define ssid2        ""
-//#define password2    ""
+#define ssid1        "amir's lappy"
+#define password1    "12345678"
+#define ssid2        "SJ Wifi #51"
+#define password2    "SJfreewifi2023"
 
 //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, 0/*no reset*/);
 OV7670 *camera;
@@ -111,7 +111,7 @@ void serve()
     }
     // close the connection:
     client.stop();
-    //Serial.println("Client Disconnected.");
+    Serial.println("Client Disconnected.");
   }  
 }
 
@@ -120,7 +120,7 @@ void setup()
   Serial.begin(115200);
 
   wifiMulti.addAP(ssid1, password1);
-  //wifiMulti.addAP(ssid2, password2);
+  wifiMulti.addAP(ssid2, password2);
   Serial.println("Connecting Wifi...");
   if(wifiMulti.run() == WL_CONNECTED) {
       Serial.println("");
