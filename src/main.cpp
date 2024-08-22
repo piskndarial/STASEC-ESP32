@@ -58,6 +58,17 @@ int udp_server = -1;
 struct sockaddr_in destination;
 bool video_running = false;
 
+void onClientChange(system_event_id_t event) {
+  // Only start sending video after a client connects to avoid flooding
+  // the channel when the client is attempting to connect.
+  video_running = WiFi.softAPgetStationNum() != 0;
+  if (video_running) {
+    Serial.println("Video started!");
+  } else {
+    Serial.println("STOPPED");
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -68,6 +79,7 @@ void setup() {
   rate.fix_rate = RATE_MCS4_SP;
   esp_wifi_internal_set_rate(100, 1, 4, &rate);
 
+WiFi.softAP(SSID);
   WiFi.softAP(SSID);
   WiFi.onEvent(onClientChange, SYSTEM_EVENT_AP_STACONNECTED);
   WiFi.onEvent(onClientChange, SYSTEM_EVENT_AP_STADISCONNECTED);
@@ -90,16 +102,6 @@ void setup() {
   Serial.println("Up, Waiting for clients");
 }
 
-void onClientChange(system_event_id_t event) {
-  // Only start sending video after a client connects to avoid flooding
-  // the channel when the client is attempting to connect.
-  video_running = WiFi.softAPgetStationNum() != 0;
-  if (video_running) {
-    Serial.println("Video started!");
-  } else {
-    Serial.println("STOPPED");
-  }
-}
 
 void loop() {
   if (!video_running) {
