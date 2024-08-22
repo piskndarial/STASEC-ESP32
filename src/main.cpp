@@ -1,173 +1,83 @@
-#include "OV7670.h"
-
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_ST7735.h> // Hardware-specific library
-#include <esp_camera.h>
-#include <Arduino.h>
-#include <Wire.h>
 #include "esp_camera.h"
-#include <esp_log.h>
-#include <esp_system.h>
-#include <nvs_flash.h>
-#include <sys/param.h>
-#include <string.h>
-#include "freertos/semphr.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include <WiFiManager.h>
-#include <WiFiClientSecure.h>
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-#include <UniversalTelegramBot.h>
-#include <ArduinoJson.h>
-#include <WiFi.h>
-#include <WiFiMulti.h>
-#include <WiFiClient.h>
-#include "BMP.h"
 
-const int SIOD = 21; //SDA
-const int SIOC = 22; //SCL
+//WROVER-KIT PIN Map
+#define CAM_PIN_PWDN    -1 //power down is not used
+#define CAM_PIN_RESET   -1 //software reset will be performed
+#define CAM_PIN_XCLK    32
+#define CAM_PIN_SIOD    21
+#define CAM_PIN_SIOC    22
 
-const int VSYNC = 34;
-const int HREF = 35;
+#define CAM_PIN_D7      4
+#define CAM_PIN_D6      12
+#define CAM_PIN_D5      13
+#define CAM_PIN_D4      14
+#define CAM_PIN_D3      15
+#define CAM_PIN_D2      16
+#define CAM_PIN_D1      17
+#define CAM_PIN_D0      27
+#define CAM_PIN_VSYNC   34
+#define CAM_PIN_HREF    35
+#define CAM_PIN_PCLK    33
 
-const int XCLK = 32;
-const int PCLK = 33;
+static camera_config_t camera_config = {
+    .pin_pwdn  = CAM_PIN_PWDN,
+    .pin_reset = CAM_PIN_RESET,
+    .pin_xclk = CAM_PIN_XCLK,
+    .pin_sccb_sda = CAM_PIN_SIOD,
+    .pin_sccb_scl = CAM_PIN_SIOC,
 
-const int D0 = 27;
-const int D1 = 17;
-const int D2 = 16;
-const int D3 = 15;
-const int D4 = 14;
-const int D5 = 13;
-const int D6 = 12;
-const int D7 = 4;
+    .pin_d7 = CAM_PIN_D7,
+    .pin_d6 = CAM_PIN_D6,
+    .pin_d5 = CAM_PIN_D5,
+    .pin_d4 = CAM_PIN_D4,
+    .pin_d3 = CAM_PIN_D3,
+    .pin_d2 = CAM_PIN_D2,
+    .pin_d1 = CAM_PIN_D1,
+    .pin_d0 = CAM_PIN_D0,
+    .pin_vsync = CAM_PIN_VSYNC,
+    .pin_href = CAM_PIN_HREF,
+    .pin_pclk = CAM_PIN_PCLK,
 
-//const int TFT_DC = 2;
-//const int TFT_CS = 5;
-//DIN <- MOSI 23
-//CLK <- SCK 18
+    .xclk_freq_hz = 20000000,//EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
+    .ledc_timer = LEDC_TIMER_0,
+    .ledc_channel = LEDC_CHANNEL_0,
 
-#define ssid1        "amir's lappy"
-#define password1    "12345678"
-#define ssid2        "SJ Wifi #51"
-#define password2    "SJfreewifi2023"
+    .pixel_format = PIXFORMAT_JPEG,//YUV422,GRAYSCALE,RGB565,JPEG
+    .frame_size = FRAMESIZE_UXGA,//QQVGA-UXGA, For ESP32, do not use sizes above QVGA when not JPEG. The performance of the ESP32-S series has improved a lot, but JPEG mode always gives better frame rates.
 
-//Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, 0/*no reset*/);
-OV7670 *camera;
+    .jpeg_quality = 12, //0-63, for OV series camera sensors, lower number means higher quality
+    .fb_count = 1, //When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
+    .grab_mode = CAMERA_GRAB_WHEN_EMPTY//CAMERA_GRAB_LATEST. Sets when buffers should be filled
+};
 
-WiFiMulti wifiMulti;
-WiFiServer server(80);
-
-unsigned char bmpHeader[BMP::headerSize];
-
-void serve()
-{
-  WiFiClient client = server.available();
-  if (client) 
-  {
-    //Serial.println("New Client.");
-    String currentLine = "";
-    while (client.connected()) 
-    {
-      if (client.available()) 
-      {
-        char c = client.read();
-        //Serial.write(c);
-        if (c == '\n') 
-        {
-          if (currentLine.length() == 0) 
-          {
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println();
-            client.print(
-              "<style>body{margin: 0}\nimg{height: 100%; width: auto}</style>"
-              "<img id='a' src='/camera' onload='this.style.display=\"initial\"; var b = document.getElementById(\"b\"); b.style.display=\"none\"; b.src=\"camera?\"+Date.now(); '>"
-              "<img id='b' style='display: none' src='/camera' onload='this.style.display=\"initial\"; var a = document.getElementById(\"a\"); a.style.display=\"none\"; a.src=\"camera?\"+Date.now(); '>");
-            client.println();
-            break;
-          } 
-          else 
-          {
-            currentLine = "";
-          }
-        } 
-        else if (c != '\r') 
-        {
-          currentLine += c;
-        }
-        
-        if(currentLine.endsWith("GET /camera"))
-        {
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:image/bmp");
-            client.println();
-            
-            client.write(bmpHeader, BMP::headerSize);
-            client.write(camera->frame, camera->xres * camera->yres * 2);
-        }
-      }
+esp_err_t camera_init(){
+    //power up the camera if PWDN pin is defined
+    if(CAM_PIN_PWDN != -1){
+        pinMode(CAM_PIN_PWDN, OUTPUT);
+        digitalWrite(CAM_PIN_PWDN, LOW);
     }
-    // close the connection:
-    client.stop();
-    Serial.println("Client Disconnected.");
-  }  
+
+    //initialize the camera
+    esp_err_t err = esp_camera_init(&camera_config);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Camera Init Failed");
+        return err;
+    }
+
+    return ESP_OK;
 }
 
-void setup() 
-{
-  Serial.begin(115200);
-
-  wifiMulti.addAP(ssid1, password1);
-  wifiMulti.addAP(ssid2, password2);
-  Serial.println("Connecting Wifi...");
-  if(wifiMulti.run() == WL_CONNECTED) {
-      Serial.println("");
-      Serial.println("WiFi connected");
-      Serial.println("IP address: ");
-      Serial.println(WiFi.localIP());
-  }
+esp_err_t camera_capture(){
+    //acquire a frame
+    camera_fb_t * fb = esp_camera_fb_get();
+    if (!fb) {
+        ESP_LOGE(TAG, "Camera Capture Failed");
+        return ESP_FAIL;
+    }
+    //replace this with your own function
+    process_image(fb->width, fb->height, fb->format, fb->buf, fb->len);
   
-  camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
-  BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
-  
-  //tft.initR(INITR_BLACKTAB);
-  //tft.fillScreen(0);
-  server.begin();
-}
-
-/*void displayY8(unsigned char * frame, int xres, int yres)
-{
-  tft.setAddrWindow(0, 0, yres - 1, xres - 1);
-  int i = 0;
-  for(int x = 0; x < xres; x++)
-    for(int y = 0; y < yres; y++)
-    {
-      i = y * xres + x;
-      unsigned char c = frame[i];
-      unsigned short r = c >> 3;
-      unsigned short g = c >> 2;
-      unsigned short b = c >> 3;
-      tft.pushColor(r << 11 | g << 5 | b);
-    }  
-}*/
-
-/*void displayRGB565(unsigned char * frame, int xres, int yres)
-{
-  tft.setAddrWindow(0, 0, yres - 1, xres - 1);
-  int i = 0;
-  for(int x = 0; x < xres; x++)
-    for(int y = 0; y < yres; y++)
-    {
-      i = (y * xres + x) << 1;
-      tft.pushColor((frame[i] | (frame[i+1] << 8)));
-    }  
-}*/
-
-void loop()
-{
-  camera->oneFrame();
-  serve();
-  //displayRGB565(camera->frame, camera->xres, camera->yres);
+    //return the frame buffer back to the driver for reuse
+    esp_camera_fb_return(fb);
+    return ESP_OK;
 }
