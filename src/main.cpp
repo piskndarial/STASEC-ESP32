@@ -1,99 +1,156 @@
-#include <esp_camera.h>
-#include <Arduino.h>
-#include <Wire.h>
-#include "esp_camera.h"
-#include <esp_log.h>
-#include <esp_system.h>
-#include <nvs_flash.h>
-#include <sys/param.h>
-#include <string.h>
-#include "freertos/semphr.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include <WiFiManager.h>
-#include <WiFiClientSecure.h>
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-#include <UniversalTelegramBot.h>
-#include <ArduinoJson.h>
+#include "OV7670.h"
 
-#define OV7670_I2C_ADDRESS 0x21 // OV7670 default I2C address
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
 
-// Define OV7670 pin connections
-#define VSYNC_PIN 25
-#define HREF_PIN 23
-#define PCLK_PIN 19
-#define XCLK_PIN 18
-#define D0_PIN 5
-#define D1_PIN 17
-#define D2_PIN 16
-#define D3_PIN 4
-#define D4_PIN 0
-#define D5_PIN 2
-#define D6_PIN 15
-#define D7_PIN 13
-void captureImage() {
-  Serial.println("Capturing Image...");
+#include <WiFi.h>
+#include <WiFiMulti.h>
+#include <WiFiClient.h>
+#include "BMP.h"
 
-  while (digitalRead(VSYNC_PIN) == LOW); // Wait for VSYNC to go high
+const int SIOD = 21; //SDA
+const int SIOC = 22; //SCL
 
-  while (digitalRead(VSYNC_PIN) == HIGH) { // Image capture loop
-    if (digitalRead(HREF_PIN) == HIGH) {
-      // Read pixel data
-      uint8_t byte = 0;
-      for (int i = 0; i < 8; i++) {
-        byte |= digitalRead(D0_PIN + i) << i;
+const int VSYNC = 34;
+const int HREF = 35;
+
+const int XCLK = 32;
+const int PCLK = 33;
+
+const int D0 = 27;
+const int D1 = 17;
+const int D2 = 16;
+const int D3 = 15;
+const int D4 = 14;
+const int D5 = 13;
+const int D6 = 12;
+const int D7 = 4;
+
+const int TFT_DC = 2;
+const int TFT_CS = 5;
+//DIN <- MOSI 23
+//CLK <- SCK 18
+
+#define ssid1        "YOUR_WIFI_SSID"
+#define password1    "YOUR_PASSWORD"
+//#define ssid2        ""
+//#define password2    ""
+
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, 0/*no reset*/);
+OV7670 *camera;
+
+WiFiMulti wifiMulti;
+WiFiServer server(80);
+
+unsigned char bmpHeader[BMP::headerSize];
+
+void serve()
+{
+  WiFiClient client = server.available();
+  if (client) 
+  {
+    //Serial.println("New Client.");
+    String currentLine = "";
+    while (client.connected()) 
+    {
+      if (client.available()) 
+      {
+        char c = client.read();
+        //Serial.write(c);
+        if (c == '\n') 
+        {
+          if (currentLine.length() == 0) 
+          {
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println();
+            client.print(
+              "<style>body{margin: 0}\nimg{height: 100%; width: auto}</style>"
+              "<img id='a' src='/camera' onload='this.style.display=\"initial\"; var b = document.getElementById(\"b\"); b.style.display=\"none\"; b.src=\"camera?\"+Date.now(); '>"
+              "<img id='b' style='display: none' src='/camera' onload='this.style.display=\"initial\"; var a = document.getElementById(\"a\"); a.style.display=\"none\"; a.src=\"camera?\"+Date.now(); '>");
+            client.println();
+            break;
+          } 
+          else 
+          {
+            currentLine = "";
+          }
+        } 
+        else if (c != '\r') 
+        {
+          currentLine += c;
+        }
+        
+        if(currentLine.endsWith("GET /camera"))
+        {
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:image/bmp");
+            client.println();
+            
+            client.write(bmpHeader, BMP::headerSize);
+            client.write(camera->frame, camera->xres * camera->yres * 2);
+        }
       }
-      Serial.write(byte); // Send pixel byte to Serial for now (or save to buffer)
     }
-
-    while (digitalRead(PCLK_PIN) == LOW); // Wait for PCLK high
-    while (digitalRead(PCLK_PIN) == HIGH); // Wait for PCLK low
-  }
-
-  Serial.println("Image Captured");
+    // close the connection:
+    client.stop();
+    //Serial.println("Client Disconnected.");
+  }  
 }
 
-void initializeCamera() {
-  Wire.beginTransmission(OV7670_I2C_ADDRESS);
-  // Send initialization commands to the OV7670
-  Wire.write(0x12); // Reset the camera
-  Wire.write(0x80);
-  Wire.endTransmission();
-  
-  delay(100); // Wait for reset
-  
-  // More initialization commands can be added here
-}
-void setup() {
-  Wire.begin();
+void setup() 
+{
   Serial.begin(115200);
 
-  // Initialize OV7670 camera
-  initializeCamera();
+  wifiMulti.addAP(ssid1, password1);
+  //wifiMulti.addAP(ssid2, password2);
+  Serial.println("Connecting Wifi...");
+  if(wifiMulti.run() == WL_CONNECTED) {
+      Serial.println("");
+      Serial.println("WiFi connected");
+      Serial.println("IP address: ");
+      Serial.println(WiFi.localIP());
+  }
   
-  // Initialize GPIO for camera data pins
-  pinMode(VSYNC_PIN, INPUT);
-  pinMode(HREF_PIN, INPUT);
-  pinMode(PCLK_PIN, INPUT);
-  for (int i = D0_PIN; i <= D7_PIN; i++) {
-    pinMode(i, INPUT);
-  }
-
-  // Initialize XCLK for camera
-  ledcAttachPin(XCLK_PIN, 0);  // Use LEDC to generate clock signal
-  ledcSetup(0, 20000000, 1);   // 20MHz clock
-  ledcWrite(0, 1);
-
-  // Ready to capture image
-  Serial.println("Camera Initialized");
+  camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
+  BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
+  
+  tft.initR(INITR_BLACKTAB);
+  tft.fillScreen(0);
+  server.begin();
 }
 
-void loop() {
-  if (digitalRead(VSYNC_PIN) == HIGH) {
-    captureImage();
-  }
+void displayY8(unsigned char * frame, int xres, int yres)
+{
+  tft.setAddrWindow(0, 0, yres - 1, xres - 1);
+  int i = 0;
+  for(int x = 0; x < xres; x++)
+    for(int y = 0; y < yres; y++)
+    {
+      i = y * xres + x;
+      unsigned char c = frame[i];
+      unsigned short r = c >> 3;
+      unsigned short g = c >> 2;
+      unsigned short b = c >> 3;
+      tft.pushColor(r << 11 | g << 5 | b);
+    }  
 }
 
+void displayRGB565(unsigned char * frame, int xres, int yres)
+{
+  tft.setAddrWindow(0, 0, yres - 1, xres - 1);
+  int i = 0;
+  for(int x = 0; x < xres; x++)
+    for(int y = 0; y < yres; y++)
+    {
+      i = (y * xres + x) << 1;
+      tft.pushColor((frame[i] | (frame[i+1] << 8)));
+    }  
+}
 
-
+void loop()
+{
+  camera->oneFrame();
+  serve();
+  displayRGB565(camera->frame, camera->xres, camera->yres);
+}
