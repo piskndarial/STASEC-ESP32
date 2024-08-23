@@ -66,9 +66,9 @@ void setup() {
   startTime = millis();
   msg = "";
   */
-  pinMode( 18, OUTPUT);
-  pinMode(19, OUTPUT);
-  pinMode(12, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(15, OUTPUT);
+  pinMode(4, OUTPUT);
   /* Merah = 2
      Hijau = 15
      Biru = 4*/
