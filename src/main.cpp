@@ -1,4 +1,3 @@
-#include "Arduino.h"
 #include "esp_camera.h"
 #include <WiFi.h>
 
@@ -14,8 +13,9 @@
 // ===================
 // Select camera model
 // ===================
+#define CAMERA_MODEL_OV7670
 //#define CAMERA_MODEL_WROVER_KIT // Has PSRAM
-#define CAMERA_MODEL_ESP_EYE  // Has PSRAM
+//#define CAMERA_MODEL_ESP_EYE  // Has PSRAM
 //#define CAMERA_MODEL_ESP32S3_EYE // Has PSRAM
 //#define CAMERA_MODEL_M5STACK_PSRAM // Has PSRAM
 //#define CAMERA_MODEL_M5STACK_V2_PSRAM // M5Camera version B Has PSRAM
@@ -37,8 +37,8 @@
 // ===========================
 // Enter your WiFi credentials
 // ===========================
-const char *ssid = "**********";
-const char *password = "**********";
+const char *ssid = "SJ Wifi #51";
+const char *password = "SJfreewifi2023";
 
 void startCameraServer();
 void setupLedFlash(int pin);
