@@ -50,7 +50,7 @@ String msg;
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 
-const int motionSensor = 26; // PIR Motion Sensor
+const int motionSensor = 23; // PIR Motion Sensor
 bool motionDetected = false;
 
 // Indicates when motion is detected
