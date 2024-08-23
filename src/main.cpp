@@ -43,8 +43,9 @@ String msg;
 // Use @myidbot to find out the chat ID of an individual or a group
 // Also note that you need to click "start" on a bot before it can
 // message you
-#define CHAT_ID "1823422500" //shahril
-//#define CHAT_ID1 "62086994" //sod
+#define CHAT_ID "1823422500"
+#define CHAT_IDG1 "-1002190410847" //shahril
+//#define CHAT_ID1 "62086994" //cg saiful
 //#define CHAT_ID2 "5189525146" //adi
 
 WiFiClientSecure client;
@@ -115,6 +116,7 @@ void setup() {
   //Serial.println(WiFi.localIP());
 
   bot.sendMessage(CHAT_ID, "Bot started up", "");
+  bot.sendMessage(CHAT_IDG1, "Bot started up", "");
   //bot.sendMessage(CHAT_ID1, "Bot started up", "");
   //bot.sendMessage(CHAT_ID2, "Bot started up", "");
   digitalWrite(15, true);
@@ -123,6 +125,7 @@ void setup() {
 void loop() {
   if(motionDetected){
     bot.sendMessage(CHAT_ID, "Motion detected!!", "");
+    bot.sendMessage(CHAT_IDG1, "Motion detected!!", "");
     //bot.sendMessage(CHAT_ID1, "Motion detected!!", "");
     //bot.sendMessage(CHAT_ID2, "Motion detected!!", "");
     Serial.println("Motion Detected");
