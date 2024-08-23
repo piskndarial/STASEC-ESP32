@@ -50,7 +50,7 @@ String msg;
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 
-const int motionSensor = 13; // PIR Motion Sensor
+const int motionSensor = 26; // PIR Motion Sensor
 bool motionDetected = false;
 
 // Indicates when motion is detected
@@ -66,9 +66,9 @@ void setup() {
   startTime = millis();
   msg = "";
   */
-  pinMode(2 , OUTPUT);
-  pinMode(15, OUTPUT);
-  pinMode(4, OUTPUT);
+  pinMode( 18, OUTPUT);
+  pinMode(19, OUTPUT);
+  pinMode(12, OUTPUT);
   /* Merah = 2
      Hijau = 15
      Biru = 4*/
