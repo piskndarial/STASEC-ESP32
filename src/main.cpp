@@ -108,10 +108,8 @@ void setup() {
   //Serial.print("IP address: ");
   //Serial.println(WiFi.localIP());
 
-  bot.sendMessage(CHAT_ID, "Bot started up", "");
-  bot.sendMessage(CHAT_IDG1, "Bot started up", "");
-  //bot.sendMessage(CHAT_ID1, "Bot started up", "");
-  //bot.sendMessage(CHAT_ID2, "Bot started up", "");
+  bot.sendMessage(CHAT_ID, "STASEC started up", "");
+  bot.sendMessage(CHAT_IDG1, "STASEC started up", "");
   digitalWrite(15, true);
 }
 
@@ -119,8 +117,6 @@ void loop() {
   if(motionDetected){
     bot.sendMessage(CHAT_ID, "Motion detected!!", "");
     bot.sendMessage(CHAT_IDG1, "Motion detected!!", "");
-    //bot.sendMessage(CHAT_ID1, "Motion detected!!", "");
-    //bot.sendMessage(CHAT_ID2, "Motion detected!!", "");
     Serial.println("Motion Detected");
     motionDetected = false;
     digitalWrite(15, false);
